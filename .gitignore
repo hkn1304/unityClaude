@@ -1,0 +1,31 @@
+# Unity generated
+Library/
+Temp/
+Obj/
+Logs/
+MemoryCaptures/
+Recordings/
+UserSettings/
+
+# Build output
+Build/
+Builds/
+
+# Visual Studio / Rider
+.vs/
+*.csproj
+*.sln
+*.user
+*.suo
+*.pidb
+*.booproj
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code internal
+.claude/
+
+# MCP config (contains local paths)
+.mcp.json
