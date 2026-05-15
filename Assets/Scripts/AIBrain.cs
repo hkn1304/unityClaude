@@ -20,7 +20,7 @@ public class AIBrain : MonoBehaviour
 
     void Update()
     {
-        if (health.IsDead || fighter.opponent == null) return;
+        if (fighter.isPlayerControlled || health.IsDead || fighter.opponent == null) return;
         if (Time.time < nextDecision) return;
         nextDecision = Time.time + reactionInterval;
 

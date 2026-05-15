@@ -1,90 +1,94 @@
-using System.Collections;
 using UnityEngine;
 
+// Throws the katana — glows cyan in flight, damages out and on return.
 public class KatanaWeapon : Weapon
 {
-    public float damage    = 25f;
-    public float lungeForce = 7f;
+    public float damage     = 28f;
+    public float throwSpeed = 22f;
 
-    public override float Cooldown    => 0.42f;
-    public override float CombatRange => 2.3f;
+    public override float Cooldown    => 1.2f;
+    public override float CombatRange => 8f;
 
     static readonly Color BladeColor  = new Color(0.88f, 0.96f, 1.00f);
     static readonly Color GuardColor  = new Color(0.20f, 0.20f, 0.25f);
     static readonly Color HandleColor = new Color(0.10f, 0.48f, 0.18f);
+    static readonly Color GlowColor   = new Color(0.40f, 0.90f, 1.00f);  // cyan in flight
 
-    Transform pivot;
-    bool      hitThisSwing;
+    Transform katanaRoot;
+    bool      inFlight;
 
     protected override void BuildVisuals()
     {
-        pivot = new GameObject("KatanaPivot").transform;
-        pivot.SetParent(transform);
+        katanaRoot = new GameObject("KatanaRoot").transform;
+        katanaRoot.SetParent(transform);
 
-        MakePart("Blade",  pivot, new Vector3(0f,  0.58f, 0f), new Vector3(0.055f, 1.16f, 1f),  0f, BladeColor);
-        MakePart("Guard",  pivot, new Vector3(0f,  0.02f, 0f), new Vector3(0.18f,  0.05f, 1f),  0f, GuardColor);
-        MakePart("Handle", pivot, new Vector3(0f, -0.24f, 0f), new Vector3(0.052f, 0.38f, 1f),  0f, HandleColor);
+        MakePart("Blade",  katanaRoot, new Vector3(0f,  0.58f, 0f), new Vector3(0.055f, 1.16f, 1f), 0f, BladeColor);
+        MakePart("Guard",  katanaRoot, new Vector3(0f,  0.02f, 0f), new Vector3(0.18f,  0.05f, 1f), 0f, GuardColor);
+        MakePart("Handle", katanaRoot, new Vector3(0f, -0.24f, 0f), new Vector3(0.052f, 0.38f, 1f), 0f, HandleColor);
 
-        UpdatePivot();
+        UpdateRoot();
     }
 
-    void Update() { if (owner != null) UpdatePivot(); }
+    public override bool TryAttack()
+    {
+        if (inFlight) return false;
+        return base.TryAttack();
+    }
 
-    void UpdatePivot()
+    void Update()
+    {
+        if (owner != null && !inFlight) UpdateRoot();
+    }
+
+    void UpdateRoot()
     {
         float f = owner.transform.localScale.x;
-        pivot.localPosition = new Vector3(f * 0.36f, 0.14f, -0.05f);
-        pivot.localScale    = new Vector3(f, 1f, 1f);
+        katanaRoot.localPosition = new Vector3(f * 0.36f, 0.14f, -0.05f);
+        katanaRoot.localScale    = new Vector3(f, 1f, 1f);
     }
 
-    protected override void DoAttack() => StartCoroutine(LungeSlash());
-
-    IEnumerator LungeSlash()
+    protected override void DoAttack()
     {
-        hitThisSwing = false;
-        float facing = owner.transform.localScale.x;
+        if (inFlight) return;
+        inFlight = true;
+        SetVisible(false);
 
-        // Blade flash (charge colour)
-        SetBladeColor(Color.cyan);
+        float   facing = owner.transform.localScale.x;
+        Vector2 spawn  = (Vector2)owner.transform.position + new Vector2(facing * 0.5f, 0.15f);
 
-        // Wind-up: pull blade back
-        pivot.localEulerAngles = new Vector3(0f, 0f, facing * -75f);
-        yield return new WaitForSeconds(0.07f);
+        var go = new GameObject("ThrownKatana");
+        go.transform.position   = spawn;
+        go.transform.localScale = Vector3.one * 0.45f;
 
-        // Lunge impulse
-        var rb = owner.GetComponent<Rigidbody2D>();
-        if (rb != null) rb.AddForce(new Vector2(facing * lungeForce, 0f), ForceMode2D.Impulse);
+        // Blade glows cyan while in flight
+        MakePart("Blade",  go.transform, new Vector3(0f,  0.58f, 0f), new Vector3(0.055f, 1.16f, 1f), 0f, GlowColor,   4);
+        MakePart("Guard",  go.transform, new Vector3(0f,  0.02f, 0f), new Vector3(0.18f,  0.05f, 1f), 0f, GuardColor,  4);
+        MakePart("Handle", go.transform, new Vector3(0f, -0.24f, 0f), new Vector3(0.052f, 0.38f, 1f), 0f, HandleColor, 4);
 
-        // Fast slash forward
-        float slashTime = 0.10f;
-        for (float t = 0f; t < 1f; t += Time.deltaTime / slashTime)
-        {
-            float angle = Mathf.Lerp(-75f, 80f, t) * facing;
-            pivot.localEulerAngles = new Vector3(0f, 0f, angle);
-            if (!hitThisSwing) HitScan(facing);
-            yield return null;
-        }
+        var rb = go.AddComponent<Rigidbody2D>();
+        rb.gravityScale = 0f;
+        rb.constraints  = RigidbodyConstraints2D.FreezeRotation;
 
-        pivot.localEulerAngles = Vector3.zero;
-        SetBladeColor(BladeColor);
+        var col = go.AddComponent<CircleCollider2D>();
+        col.isTrigger = true;
+        col.radius    = 0.55f;
+
+        var tw = go.AddComponent<ThrownWeapon>();
+        tw.damage      = damage;
+        tw.speed       = throwSpeed;
+        tw.returnDelay = 0.30f;
+        tw.spinSpeed   = 540f;   // slower, more elegant rotation
+        tw.ownerRoot   = owner.transform;
+        tw.onCaught    = () => { if (this != null) { inFlight = false; SetVisible(true); } };
+
+        rb.linearVelocity = new Vector2(facing * throwSpeed, 0f);
+        Destroy(go, 6f);
     }
 
-    void HitScan(float facing)
+    void SetVisible(bool v)
     {
-        Vector2 origin = (Vector2)owner.transform.position + new Vector2(facing * 0.5f, 0.2f);
-        foreach (var c in Physics2D.OverlapCircleAll(origin, CombatRange))
-        {
-            var fc = c.GetComponentInParent<FighterController>();
-            if (fc == null || fc == owner) continue;
-            hitThisSwing = true;
-            fc.GetComponent<FighterHealth>()?.TakeDamage(damage, pivot.position);
-            break;
-        }
-    }
-
-    void SetBladeColor(Color col)
-    {
-        var blade = pivot.Find("Blade");
-        if (blade) blade.GetComponent<SpriteRenderer>().color = col;
+        if (katanaRoot == null) return;
+        foreach (var sr in katanaRoot.GetComponentsInChildren<SpriteRenderer>())
+            sr.enabled = v;
     }
 }

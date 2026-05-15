@@ -23,8 +23,9 @@ public static class WeaponFactory
             case WeaponType.Boomerang: w = go.AddComponent<BoomerangWeapon>(); break;
             case WeaponType.Gun:       w = go.AddComponent<GunWeapon>();       break;
             case WeaponType.Sniper:    w = go.AddComponent<SniperWeapon>();    break;
-            case WeaponType.PortalGun: w = go.AddComponent<PortalGunWeapon>(); break;
-            default:                   w = go.AddComponent<SwordWeapon>();     break;
+            case WeaponType.PortalGun:  w = go.AddComponent<PortalGunWeapon>();  break;
+            case WeaponType.FightGlove: w = go.AddComponent<FightGloveWeapon>(); break;
+            default:                    w = go.AddComponent<SwordWeapon>();      break;
         }
         w.Equip(fighter);
         return w;

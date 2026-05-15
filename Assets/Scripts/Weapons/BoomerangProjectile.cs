@@ -3,8 +3,9 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D))]
 public class BoomerangProjectile : MonoBehaviour
 {
-    public float     damage   = 16f;
-    public float     speed    = 11f;
+    public float     damage       = 16f;
+    public float     speed        = 11f;
+    public float     outboundTime = 0.55f;
     public Transform ownerRoot;
 
     enum Phase { Outbound, Returning }
@@ -23,7 +24,7 @@ public class BoomerangProjectile : MonoBehaviour
         {
             // Small upward arc on the way out
             rb.linearVelocity += new Vector2(0f, -0.5f);
-            if (timer > 0.45f) phase = Phase.Returning;
+            if (timer > outboundTime) phase = Phase.Returning;
         }
         else
         {

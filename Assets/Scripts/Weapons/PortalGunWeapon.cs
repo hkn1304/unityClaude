@@ -1,11 +1,12 @@
 using UnityEngine;
 
-// First shot = blue portal, second = orange portal.
-// When both exist, any fighter touching one exits the other.
+// J = gun bullet (damage).  K = portal shot (blue then orange, teleports fighters).
+// When both portals exist, any fighter touching one exits the other.
 public class PortalGunWeapon : Weapon
 {
-    public override float Cooldown    => 1.0f;
-    public override float CombatRange => 10f;
+    public override float Cooldown          => 0.25f;   // gun fire rate
+    public override float SecondaryCooldown => 1.0f;    // portal shot rate
+    public override float CombatRange       => 10f;
 
     static readonly Color Blue       = new Color(0.20f, 0.55f, 1.00f);
     static readonly Color Orange     = new Color(1.00f, 0.50f, 0.08f);
@@ -49,7 +50,41 @@ public class PortalGunWeapon : Weapon
         if (emitterSR) emitterSR.color = nextIsBlue ? Blue : Orange;
     }
 
+    // J — fast damage bullet
     protected override void DoAttack()
+    {
+        float facing = owner.transform.localScale.x;
+        Vector2 spawnPos = barrelTip != null
+            ? (Vector2)barrelTip.position
+            : (Vector2)owner.transform.position + new Vector2(facing * 0.6f, 0.1f);
+
+        SpawnFlash(spawnPos, new Color(1f, 0.9f, 0.4f));
+
+        var go = new GameObject("GunBullet");
+        go.transform.position   = spawnPos;
+        go.transform.localScale = Vector3.one * 0.12f;
+
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = RectSprite(); sr.color = new Color(1f, 0.9f, 0.4f); sr.sortingOrder = 5;
+
+        var rb = go.AddComponent<Rigidbody2D>();
+        rb.gravityScale = 0f;
+        rb.constraints  = RigidbodyConstraints2D.FreezeRotation;
+
+        var col2d = go.AddComponent<CircleCollider2D>();
+        col2d.isTrigger = true;
+        col2d.radius    = 0.45f;
+
+        var dp = go.AddComponent<DamageProjectile>();
+        dp.damage    = 20f;
+        dp.ownerRoot = owner.transform;
+
+        rb.linearVelocity = new Vector2(facing * 28f, 0f);
+        Destroy(go, 1.5f);
+    }
+
+    // K — portal shot (blue first, then orange)
+    protected override void DoSecondaryAttack()
     {
         bool isBlue = nextIsBlue;
         nextIsBlue  = !nextIsBlue;
@@ -61,10 +96,8 @@ public class PortalGunWeapon : Weapon
             ? (Vector2)barrelTip.position
             : (Vector2)owner.transform.position + new Vector2(facing * 0.6f, 0.1f);
 
-        // Muzzle flash
         SpawnFlash(spawnPos, col);
 
-        // Projectile
         var go = new GameObject("PortalShot");
         go.transform.position   = spawnPos;
         go.transform.localScale = Vector3.one * 0.20f;

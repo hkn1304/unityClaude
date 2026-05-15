@@ -45,20 +45,30 @@ public class SwordWeapon : Weapon
 
     IEnumerator Swing()
     {
-        swinging      = true;
-        hitThisSwing  = false;
-        float facing  = owner.transform.localScale.x;
-        float from    = facing > 0 ? 55f : -55f;
-        float to      = facing > 0 ? -65f : 65f;
+        swinging     = true;
+        hitThisSwing = false;
+        float facing = owner.transform.localScale.x;
+
+        // Angles stay entirely on the forward side: upper-forward → lower-forward
+        float from    = facing > 0 ? -25f :  25f;
+        float to      = facing > 0 ? -105f : 105f;
         float duration = 0.18f;
+
+        Vector3 restPos  = new Vector3(facing * 0.38f, 0.12f, -0.05f);
+        Vector3 lungePos = new Vector3(facing * 0.60f, 0.12f, -0.05f);
 
         for (float t = 0; t < duration; t += Time.deltaTime)
         {
-            pivot.localEulerAngles = new Vector3(0, 0, Mathf.Lerp(from, to, t / duration));
+            float prog = t / duration;
+            // Lunge peaks at 40% through the swing, then retracts
+            float lp = prog < 0.4f ? prog / 0.4f : 1f - (prog - 0.4f) / 0.6f;
+            pivot.localPosition    = Vector3.Lerp(restPos, lungePos, lp);
+            pivot.localEulerAngles = new Vector3(0, 0, Mathf.Lerp(from, to, prog));
             HitScan(facing);
             yield return null;
         }
 
+        pivot.localPosition    = restPos;
         pivot.localEulerAngles = Vector3.zero;
         swinging = false;
     }

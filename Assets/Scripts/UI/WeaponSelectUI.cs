@@ -12,43 +12,45 @@ public class WeaponSelectUI : MonoBehaviour
     const int VISIBLE = 4;   // cards shown per panel at once
 
     static readonly WeaponType[] AllWeapons = {
-        WeaponType.Sword,   WeaponType.Bow,      WeaponType.Dagger,    WeaponType.Staff,
-        WeaponType.Katana,  WeaponType.Hammer,   WeaponType.Shuriken,  WeaponType.Boomerang,
-        WeaponType.Gun,     WeaponType.Sniper,   WeaponType.PortalGun,
+        WeaponType.Sword,   WeaponType.Bow,       WeaponType.Dagger,    WeaponType.Staff,
+        WeaponType.Katana,  WeaponType.Hammer,    WeaponType.Shuriken,  WeaponType.Boomerang,
+        WeaponType.Gun,     WeaponType.Sniper,    WeaponType.PortalGun, WeaponType.FightGlove,
     };
 
     static readonly string[] WepNames = {
-        "SWORD",    "BOW",     "DAGGER",    "STAFF",
-        "KATANA",   "HAMMER",  "SHURIKEN",  "BOOMERANG",
-        "GUN",      "SNIPER",  "PORTAL GUN",
+        "SWORD",    "BOW",     "DAGGER",      "STAFF",
+        "KATANA",   "HAMMER",  "SHURIKEN",    "BOOMERANG",
+        "GUN",      "SNIPER",  "PORTAL GUN",  "FIGHT GLOVE",
     };
 
     static readonly string[] WepStats = {
         "Balanced melee  |  22 dmg  |  0.45s",
-        "Ranged arc fire  |  18 dmg  |  1.3s",
-        "Fast double stab  |  13×2 dmg  |  0.28s",
-        "Homing magic orb  |  20 dmg  |  1.0s",
-        "Lunge + fast slash  |  25 dmg  |  0.42s",
-        "360° spin + deflect  |  35 dmg  |  1.5s",
+        "Hold J to draw  |  22–36 dmg  |  13–23 speed",
+        "Thrown + returns  |  18 dmg out+back  |  1.0s",
+        "Hold J to charge  |  20–40 dmg  |  1.0s",
+        "Thrown glowing  |  28 dmg out+back  |  1.2s",
+        "Hold J to wind up  |  35–65 dmg  |  0.8–1.7s spin",
         "Stars stick in enemy  |  12×3 dmg + fireball",
-        "Returns to owner  |  16×2 dmg  |  2.0s",
+        "Hold J to charge  |  16–32 dmg  |  2.0s",
         "Rapid burst x4  |  9×4 dmg  |  0.55s",
         "Laser sight + 1 shot  |  48 dmg  |  2.2s",
-        "Shoot portals  |  teleport fighters  |  1.0s",
+        "J: gun 20dmg 0.25s  |  K: portal shot 1.0s",
+        "J: jab 14dmg 0.3s  |  K: hadouken 30dmg 1.0s",
     };
 
     static readonly Color[] WepColors = {
-        new Color(1.0f, 0.85f, 0.2f),    // Sword     – gold
-        new Color(0.3f, 0.9f, 0.3f),     // Bow       – green
-        new Color(0.9f, 0.3f, 0.3f),     // Dagger    – red
-        new Color(0.75f, 0.35f, 1.0f),   // Staff     – purple
-        new Color(0.2f, 0.85f, 1.0f),    // Katana    – ice blue
-        new Color(0.95f, 0.55f, 0.15f),  // Hammer    – orange
-        new Color(0.95f, 0.95f, 0.3f),   // Shuriken  – yellow
-        new Color(0.35f, 0.95f, 0.65f),  // Boomerang – teal
-        new Color(0.70f, 0.70f, 0.75f),  // Gun       – steel gray
-        new Color(0.55f, 0.90f, 0.40f),  // Sniper    – military green
-        new Color(0.20f, 0.55f, 1.00f),  // PortalGun – portal blue
+        new Color(1.0f, 0.85f, 0.2f),    // Sword      – gold
+        new Color(0.3f, 0.9f, 0.3f),     // Bow        – green
+        new Color(0.9f, 0.3f, 0.3f),     // Dagger     – red
+        new Color(0.75f, 0.35f, 1.0f),   // Staff      – purple
+        new Color(0.2f, 0.85f, 1.0f),    // Katana     – ice blue
+        new Color(0.95f, 0.55f, 0.15f),  // Hammer     – orange
+        new Color(0.95f, 0.95f, 0.3f),   // Shuriken   – yellow
+        new Color(0.35f, 0.95f, 0.65f),  // Boomerang  – teal
+        new Color(0.70f, 0.70f, 0.75f),  // Gun        – steel gray
+        new Color(0.55f, 0.90f, 0.40f),  // Sniper     – military green
+        new Color(0.20f, 0.55f, 1.00f),  // PortalGun  – portal blue
+        new Color(0.90f, 0.12f, 0.12f),  // FightGlove – fighting red
     };
 
     // Per-panel state
@@ -110,12 +112,26 @@ public class WeaponSelectUI : MonoBehaviour
             if (kb[Key.S].wasPressedThisFrame) { p1.cursor = Mathf.Min(AllWeapons.Length - 1, p1.cursor + 1); Refresh(p1); }
             if (kb[Key.J].wasPressedThisFrame) { p1.locked = true; Refresh(p1); TryBegin(); }
         }
+        else if (kb[Key.J].wasPressedThisFrame && selecting)
+        {
+            // J again before countdown starts = unlock and re-select
+            p1.locked = false;
+            if (p1.hint) p1.hint.text = "W/S: navigate   J: confirm";
+            Refresh(p1);
+        }
 
         if (!p2AI && !p2.locked)
         {
             if (kb[Key.UpArrow].wasPressedThisFrame)   { p2.cursor = Mathf.Max(0, p2.cursor - 1); Refresh(p2); }
             if (kb[Key.DownArrow].wasPressedThisFrame) { p2.cursor = Mathf.Min(AllWeapons.Length - 1, p2.cursor + 1); Refresh(p2); }
             if (kb[Key.Comma].wasPressedThisFrame)     { p2.locked = true; Refresh(p2); TryBegin(); }
+        }
+        else if (!p2AI && kb[Key.Comma].wasPressedThisFrame && selecting)
+        {
+            // comma again before countdown starts = unlock and re-select
+            p2.locked = false;
+            if (p2.hint) p2.hint.text = "↑/↓: navigate   ,: confirm";
+            Refresh(p2);
         }
     }
 

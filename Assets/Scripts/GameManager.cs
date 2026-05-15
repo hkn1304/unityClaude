@@ -101,6 +101,9 @@ public class GameManager : MonoBehaviour
     {
         roundOver = false;
 
+        player1.ResetPhysics();
+        player2.ResetPhysics();
+
         player1.transform.position = p1Spawn;
         player2.transform.position = p2Spawn;
 

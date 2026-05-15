@@ -6,8 +6,11 @@ public abstract class Weapon : MonoBehaviour
     float nextAttack;
     bool  visualsBuilt;
 
-    public abstract float Cooldown          { get; }
+    public abstract float Cooldown           { get; }
+    public virtual  float SecondaryCooldown { get; } = 1.0f;
     public virtual  float CombatRange       { get; } = 2f;
+
+    float nextAttackSecondary;
 
     // Called from Editor setup OR WeaponFactory at runtime
     public void Equip(FighterController fighter)
@@ -40,7 +43,7 @@ public abstract class Weapon : MonoBehaviour
 
     protected abstract void BuildVisuals();
 
-    public bool TryAttack()
+    public virtual bool TryAttack()
     {
         if (owner != null && owner.inputFrozen) return false;
         if (Time.time < nextAttack) return false;
@@ -50,6 +53,17 @@ public abstract class Weapon : MonoBehaviour
     }
 
     protected abstract void DoAttack();
+
+    public bool TrySecondaryAttack()
+    {
+        if (owner != null && owner.inputFrozen) return false;
+        if (Time.time < nextAttackSecondary) return false;
+        nextAttackSecondary = Time.time + SecondaryCooldown;
+        DoSecondaryAttack();
+        return true;
+    }
+
+    protected virtual void DoSecondaryAttack() { }
 
     // ── Shared sprite factories ───────────────────────────────────────────────
 

@@ -36,6 +36,22 @@ public class FighterController : MonoBehaviour
     {
         rb     = GetComponent<Rigidbody2D>();
         health = GetComponent<FighterHealth>();
+        health.onDeath.AddListener(PlayDeathAnim);
+    }
+
+    void PlayDeathAnim()
+    {
+        rb.constraints    = RigidbodyConstraints2D.None;
+        rb.angularVelocity = transform.localScale.x * -180f;  // tip backward
+        rb.gravityScale    = 5f;
+    }
+
+    public void ResetPhysics()
+    {
+        rb.gravityScale   = 3f;
+        rb.constraints    = RigidbodyConstraints2D.FreezeRotation;
+        rb.angularVelocity = 0f;
+        transform.rotation = Quaternion.identity;
     }
 
     void Update()
@@ -72,7 +88,8 @@ public class FighterController : MonoBehaviour
         }
         if (KeyDown(kickKey))
         {
-            if (equippedWeapon == null) { TryAttack(kickDamage, kickRange); StartCoroutine(AttackAnim("LegR", -0.25f)); }
+            if (equippedWeapon != null) equippedWeapon.TrySecondaryAttack();
+            else { TryAttack(kickDamage, kickRange); StartCoroutine(AttackAnim("LegR", -0.25f)); }
         }
     }
 
@@ -145,7 +162,7 @@ public class FighterController : MonoBehaviour
         return k != Key.None && kb[k].wasPressedThisFrame;
     }
 
-    static Key Map(KeyCode kc) => kc switch
+    public static Key Map(KeyCode kc) => kc switch
     {
         KeyCode.A          => Key.A,
         KeyCode.B          => Key.B,

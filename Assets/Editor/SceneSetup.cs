@@ -20,13 +20,27 @@ public static class SceneSetup
             KeyCode.LeftArrow, KeyCode.RightArrow, KeyCode.UpArrow,
             KeyCode.Comma, KeyCode.Period, aiControlled: true);
 
+        SetupCameraController(p1.transform, p2.transform);
+
         var gm = CreateGameManager(p1, p2);
         CreateUI(gm);
+
+        CreateMusicManager();
 
         EditorUtility.SetDirty(p1.gameObject);
         EditorUtility.SetDirty(p2.gameObject);
         EditorUtility.SetDirty(gm.gameObject);
         Debug.Log("[Supreme Duelist] Scene setup complete! Press Play to start.");
+    }
+
+    // ─── Music ────────────────────────────────────────────────────────────────
+
+    static void CreateMusicManager()
+    {
+        var go = new GameObject("MusicManager");
+        go.AddComponent<AudioSource>();
+        go.AddComponent<MusicManager>();
+        EditorUtility.SetDirty(go);
     }
 
     // ─── Tag registration ─────────────────────────────────────────────────────
@@ -46,7 +60,7 @@ public static class SceneSetup
     // ─── Cleanup ──────────────────────────────────────────────────────────────
 
     static readonly string[] ManagedObjects =
-        { "Ground", "WallLeft", "WallRight", "Player1", "Player2", "GameManager", "Canvas" };
+        { "Ground", "WallLeft", "WallRight", "Player1", "Player2", "GameManager", "Canvas", "MusicManager" };
 
     static void CleanScene()
     {
@@ -68,6 +82,16 @@ public static class SceneSetup
         cam.backgroundColor  = new Color(0.08f, 0.08f, 0.15f);
         cam.transform.position = new Vector3(0f, -0.5f, -10f);
         EditorUtility.SetDirty(cam);
+    }
+
+    static void SetupCameraController(Transform p1, Transform p2)
+    {
+        var cam = Camera.main;
+        var cc  = cam.gameObject.GetComponent<CameraController>();
+        if (cc == null) cc = cam.gameObject.AddComponent<CameraController>();
+        cc.p1 = p1;
+        cc.p2 = p2;
+        EditorUtility.SetDirty(cam.gameObject);
     }
 
     // ─── Arena ────────────────────────────────────────────────────────────────
@@ -94,7 +118,7 @@ public static class SceneSetup
     static void CreateWall(string name, Vector3 pos)
     {
         var go = new GameObject(name);
-        go.tag = "Ground";
+        // No "Ground" tag — walls must not affect grounded detection
         go.transform.position   = pos;
         go.transform.localScale = new Vector3(1f, 12f, 1f);
         go.AddComponent<BoxCollider2D>();
@@ -127,9 +151,10 @@ public static class SceneSetup
         AddPart(root.transform, "LegL", new Vector3(-0.19f, -0.68f, 0f), new Vector3(0.13f, 0.52f, 1f), -12f, color, SquareSprite());
         AddPart(root.transform, "LegR", new Vector3( 0.19f, -0.68f, 0f), new Vector3(0.13f, 0.52f, 1f),  12f, color, SquareSprite());
 
-        // Scripts — FighterHealth must be added before FighterController
-        // so that Awake() on FighterController can find it via GetComponent
+        // FighterHealth before FighterController so Awake() can find it via GetComponent.
+        // FloatingHealthBar subscribes to FighterHealth events in its own Awake().
         root.AddComponent<FighterHealth>();
+        root.AddComponent<FloatingHealthBar>();
 
         var fc = root.AddComponent<FighterController>();
         fc.leftKey  = left;
@@ -192,11 +217,7 @@ public static class SceneSetup
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // Health bars
-        gm.p1HealthBar = BuildHealthBar(canvasGO.transform, "P1HealthBar",
-            new Vector2(0f, 1f), new Vector2(20f, -20f),  new Vector2(320f, 40f), "P1", false);
-        gm.p2HealthBar = BuildHealthBar(canvasGO.transform, "P2HealthBar",
-            new Vector2(1f, 1f), new Vector2(-20f, -20f), new Vector2(320f, 40f), "P2", true);
+        // Health bars are floating world-space bars on each fighter (FloatingHealthBar component).
 
         // Round score
         gm.roundInfoText = BuildTMP(canvasGO.transform, "RoundInfoText",
@@ -212,8 +233,8 @@ public static class SceneSetup
 
         // Controls hint
         BuildTMP(canvasGO.transform, "ControlsHint",
-            new Vector2(0.5f, 0f), new Vector2(0f, 14f), new Vector2(700f, 36f),
-            "P1: A/D move  W/S select  J confirm     P2: ← → move  ↑↓ select  , confirm",
+            new Vector2(0.5f, 0f), new Vector2(0f, 14f), new Vector2(780f, 36f),
+            "P1: A/D  W jump  J attack  K alt     P2: ←/→  ↑ jump  , attack  . alt",
             16, new Color(1f, 1f, 1f, 0.5f), TextAlignmentOptions.Center);
 
         gm.weaponSelectUI = canvasGO.AddComponent<WeaponSelectUI>();
